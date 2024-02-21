@@ -1,10 +1,13 @@
 import re
 import os
+import sys
 import openpyxl as op
 from docx2txt import process
 from tkinter import Tk, Label, Button, Listbox, Scrollbar, messagebox
 from docxtpl import DocxTemplate
 from docx2pdf import convert
+import random
+import string
 
 TEMPLATE_PATH = "C:\\Users\\Roman\\Desktop\\Макрос\\Шаблон\\ШаблонПовышка.docx"
 EXCEL_PATH = "C:\\Users\\Roman\\Desktop\\Макрос\\ДанныеДляПовышки.xlsx"
@@ -14,6 +17,12 @@ SAVE_PATH = "C:\\Users\\Roman\\Desktop\\Макрос\\Собранные фай�
 def close_program():
     exit()
 
+def restart_program():
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
+
+def generate_unique_suffix(length=4):
+    return ''.join(random.choices(string.ascii_uppercase, k=length))
 
 def parse_template(template_path):
     text = process(template_path)
@@ -167,9 +176,11 @@ def show_success_or_report_window(root):
     yes_button = Button(root, text="Да, отправить", command=lambda: messagebox.showinfo("Ну и ябеда!", "Ну и ябеда!"))
     yes_button.grid(row=2, column=0, pady=5)
 
-    close_button = Button(root, text="Закрыть программу", command=close_program)
-    close_button.grid(row=3, column=0, pady=5)
+    restart_button = Button(root, text="Произвести еще замены", command=restart_program)
+    restart_button.grid(row=3, column=0, pady=5)
 
+    close_button = Button(root, text="Закрыть программу", command=close_program)
+    close_button.grid(row=4, column=0, pady=5)
 
 def clear_window(root):
     # Очищаем содержимое основного окна
@@ -201,44 +212,36 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
         # Заменяем недопустимые символы в названии файла
         file_name = re.sub(r'[\\/*?:"<>|]', '_', str(context[column_name]))
 
-        # Сохраняем документ в формате DOCX
-        doc = DocxTemplate(TEMPLATE_PATH)
-        doc.render(context)
-        doc_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx")
-        doc.save(doc_path)
+        # Проверяем, существует ли файл с таким же именем
+        file_exists = os.path.exists(os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx"))
+        if file_exists:
+            file_name += f"_{generate_unique_suffix()}"
 
-        if convert_to_pdf:
-            # Конвертируем документ в формат PDF
-            pdf_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
-            convert(doc_path, pdf_path)
-            print(f"Созданы файлы: {doc_path} (DOCX) и {pdf_path} (PDF)")
-            if delete_docx:
-                os.remove(doc_path)  # Удаляем DOCX файл после конвертации в PDF
-                print(f"Файл {doc_path} удален успешно.")
+        
+        if any(context.values()):  # Проверяем, есть ли вообще какие-то данные
+            # Сохраняем документ в формате DOCX
+            doc = DocxTemplate(TEMPLATE_PATH)
+            doc.render(context)
+            doc_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx")
+            doc.save(doc_path)
+
+            if convert_to_pdf:
+                # Конвертируем документ в формат PDF
+                pdf_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
+                convert(doc_path, pdf_path)
+                if delete_docx:
+                    os.remove(doc_path)  # Удаляем DOCX файл после конвертации в PDF
         else:
-            print(f"Создан файл: {doc_path} (DOCX)")
-
-    # Удаляем файлы с названием "шаблон-None", если они были созданы
-    none_file_path = os.path.join(SAVE_PATH, "шаблон-None.docx")
-    if os.path.exists(none_file_path):
-        os.remove(none_file_path)
-        print(f"Файл {none_file_path} удален успешно.")
-
-    none_file_pdf_path = os.path.join(SAVE_PATH, "шаблон-None.pdf")
-    if os.path.exists(none_file_pdf_path):
-        os.remove(none_file_pdf_path)
-        print(f"Файл {none_file_pdf_path} удален успешно.")
+            pass
 
     # Удаляем файлы с названием "шаблон-выбранное_название_для_файлов", если они были созданы
     selected_file_path = os.path.join(SAVE_PATH, f"шаблон-{column_name}.docx")
     if os.path.exists(selected_file_path):
         os.remove(selected_file_path)
-        print(f"Файл {selected_file_path} удален успешно.")
 
     selected_file_pdf_path = os.path.join(SAVE_PATH, f"шаблон-{column_name}.pdf")
     if os.path.exists(selected_file_pdf_path):
         os.remove(selected_file_pdf_path)
-        print(f"Файл {selected_file_pdf_path} удален успешно.")
 
 def excel_read(root, path_file):
     wb_read = op.load_workbook(filename=path_file, data_only=True)
@@ -251,7 +254,6 @@ def excel_read(root, path_file):
     if differences != "Заголовки в файле Ecel совпадают с переменными в шаблоне.":
         show_header_and_variable_selection_ui(root, header_row, template_variables)
     else:
-        print("Заголовки в файле Excel совпадают с переменными в шаблоне.")
         # Выбираем произвольный заголовок Excel для создания файла
         default_column_name = next(iter(header_row.keys()))
         create_doc(root, [], header_row, 1, default_column_name)
@@ -266,7 +268,10 @@ if __name__ == '__main__':
     root = Tk()
     root.title("Моя программа")
     root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root))
-
+    
+    # Поднимаем окно на передний план
+    root.lift()
+    
     excel_read(root, EXCEL_PATH)
 
     root.mainloop()
