@@ -25,7 +25,7 @@ You can also create an executable file (exe) from this script. To do this, follo
 
 2. Run PyInstaller for your script:
     ```
-    pyinstaller --onefile auto_fill_documents.py
+    pyinstaller --onefile AutoDocChange.py
     ```
 
 3. The executable file will be created in the `dist` folder.

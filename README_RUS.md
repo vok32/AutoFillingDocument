@@ -25,7 +25,7 @@
 
 2. Запустите PyInstaller для вашего скрипта:
     ```
-    pyinstaller --onefile auto_fill_documents.py
+    pyinstaller --onefile AutoDocChange.py
     ```
 
 3. Исполняемый файл будет создан в папке `dist`.
