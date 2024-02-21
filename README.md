@@ -4,8 +4,7 @@ This script is designed to automatically fill in Word document templates based o
 
 ## Files
 
-- `auto_fill_documents.py `: The main script for running the program.
-- `requirements.txt `: List of dependencies.
+- `AutoDocChange.py `: The main script for running the program.
 
 ## Dependencies
 
