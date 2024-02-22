@@ -98,4 +98,4 @@ The program assumes that the data in the Excel table has a specific structure, w
 
 ## Author
 
-This script was developed by  [Roman](https://github.com/vok32).
+This script was developed by  [R V](https://github.com/vok32).
