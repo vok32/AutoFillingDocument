@@ -3,12 +3,13 @@ import os
 import sys
 import subprocess
 import openpyxl as op
-from tkinter import Tk, Label, Button, Listbox, Scrollbar, filedialog, messagebox, StringVar, Frame, LEFT
+from tkinter import Tk, Label, Button, Listbox, Scrollbar, filedialog, messagebox, StringVar, Frame, LEFT, Text
 from docx2txt import process
 from docxtpl import DocxTemplate
 from docx2pdf import convert
 import random
 import string
+import pyautogui
 
 # Глобальные переменные для хранения путей к файлам и папкам
 TEMPLATE_PATH = ""
@@ -37,8 +38,22 @@ def parse_template(template_path):
 # Функция для выбора файла шаблона Word
 def select_template_file():
     global TEMPLATE_PATH
-    TEMPLATE_PATH = filedialog.askopenfilename(title="Выберите файл шаблона Word", filetypes=[("Word files", "*.docx")])
-    template_file_label.config(text=os.path.basename(TEMPLATE_PATH))
+    global template_file_label
+
+    selected_path = filedialog.askopenfilename(title="Выберите файл шаблона Word", filetypes=[("Word files", "*.docx")])
+    if selected_path:
+        TEMPLATE_PATH = selected_path
+        template_variables = parse_template(TEMPLATE_PATH)
+        if not template_variables:
+            messagebox.showerror("Ошибка", "В выбранном шаблоне нет переменных. Пожалуйста, выберите другой шаблон.")
+            TEMPLATE_PATH = ""  # Сбрасываем путь к файлу шаблона
+            template_file_label.config(text="")  # Очищаем метку с именем файла шаблона
+            description_label.config(text="В выбранном шаблоне не найдены переменные. Пожалуйста, выберите другой шаблон.")
+        else:
+            template_file_label.config(text=os.path.basename(TEMPLATE_PATH))
+            description_label.config(text="Это программа для автозаполнения шаблонов документов Word при помощи таблицы Excel")
+    else:
+        messagebox.showerror("Ошибка", "Файл шаблона не выбран. Пожалуйста, выберите файл шаблона.")
 
 # Функция для выбора файла Excel с данными
 def select_excel_file():
@@ -67,7 +82,7 @@ def compare_headers_and_variables(header_row, template_variables):
     if excel_headers_set != template_variables_set:
         missing_in_excel = excel_headers_set - template_variables_set
         missing_in_template = template_variables_set - excel_headers_set
-        message = "Отличия между заголовками в файле Excel и переменными в шаблоне:\n\n"
+        message = ""
         if missing_in_excel:
             message += "Заголовки в файле Excel, но отсутствующие в шаблоне:\n"
             for header in missing_in_excel:
@@ -84,45 +99,87 @@ def compare_headers_and_variables(header_row, template_variables):
 # Функция для отображения интерфейса выбора заголовков и переменных
 def show_header_and_variable_selection_ui(root, header_row, template_variables):
     clear_window(root)
+    root.geometry("900x350")  # Установка размера окна
 
-    excel_headers_message = "Список заголовков в файле Excel:\n"
-    for index, column_name in enumerate(header_row, start=1):
-        excel_headers_message += f"{index}. {column_name}\n"
+    excel_frame = Frame(root)
+    excel_frame.grid(row=0, column=0, padx=10, pady=5)
+    
+    template_frame = Frame(root)
+    template_frame.grid(row=0, column=1, padx=10, pady=5)
 
-    template_variables_message = ""
-    if template_variables:
-        template_variables_message = "Переменные в шаблоне:\n"
-        for index, var in enumerate(template_variables, start=1):
-            template_variables_message += f"{index}. {var}\n"
+    # Создаем метки для заголовков и переменных
+    excel_header_label = Label(excel_frame, text="Список заголовков в файле Excel:", font=("Arial", 10, "bold"))
+    excel_header_label.grid(row=0, column=0, sticky='w')
 
-    excel_headers_label = Label(root, text=excel_headers_message, justify="left")
-    excel_headers_label.grid(row=0, column=0, sticky="w")
+    template_header_label = Label(template_frame, text="Переменные в шаблоне Word:", font=("Arial", 10, "bold"))
+    template_header_label.grid(row=0, column=0, sticky='w')
 
-    template_variables_label = Label(root, text=template_variables_message, justify="left")
-    template_variables_label.grid(row=1, column=0, sticky="w")
+    # Сортировка заголовков Excel по алфавиту
+    sorted_excel_headers = sorted(header_row.keys())
+    excel_headers_text = Text(excel_frame, wrap="word", height=10, width=40)
+    excel_headers_text.grid(row=1, column=0, sticky='w')
+
+    for index, column_name in enumerate(sorted_excel_headers, start=1):
+        excel_headers_text.insert("end", f"{index}. {column_name}\n")
+
+    # Сортировка переменных шаблона Word по алфавиту
+    sorted_template_variables = sorted(template_variables)
+    template_variables_text = Text(template_frame, wrap="word", height=10, width=40)
+    template_variables_text.grid(row=1, column=0, sticky='w')
+
+    for index, var in enumerate(sorted_template_variables, start=1):
+        template_variables_text.insert("end", f"{index}. {var}\n")
+
+    # Добавляем скроллбары
+    excel_scrollbar = Scrollbar(excel_frame, command=excel_headers_text.yview)
+    excel_scrollbar.grid(row=1, column=1, sticky='ns')
+    excel_headers_text.config(yscrollcommand=excel_scrollbar.set)
+
+    template_scrollbar = Scrollbar(template_frame, command=template_variables_text.yview)
+    template_scrollbar.grid(row=1, column=1, sticky='ns')
+    template_variables_text.config(yscrollcommand=template_scrollbar.set)
 
     continue_button = Button(root, text="Продолжить", command=lambda: show_differences_ui(root, header_row, template_variables))
-    continue_button.grid(row=2, column=0, pady=10)
+    continue_button.grid(row=2, column=0, columnspan=2, pady=5)
 
     close_button = Button(root, text="Закрыть программу", command=close_program)
-    close_button.grid(row=4, column=0, pady=5)
+    close_button.grid(row=4, column=0, columnspan=2, pady=5)
 
 # Функция для отображения интерфейса различий между заголовками и переменными
 def show_differences_ui(root, header_row, template_variables):
     clear_window(root)
+    root.geometry("900x350")  # Установка размера окна
 
     differences_message = compare_headers_and_variables(header_row, template_variables)
-    differences_label = Label(root, text=differences_message, justify="left")
-    differences_label.grid(row=0, column=0, sticky="w")
 
-    max_width = max(len(line) for line in differences_message.split('\n'))
-    set_label_width(differences_label, max_width)
+    differences_label = Label(root, justify="center")  # Выравнивание по центру
+    differences_label.place(relx=0.5, rely=0.4, anchor="center")  # Установка по центру окна и немного выше середины
+
+    # Разделяем сообщение на части и применяем стили к каждой части
+    parts = re.split(r'(Заголовки в файле Excel, но отсутствующие в шаблоне:|Переменные в шаблоне, но отсутствующие в заголовках файла Excel:)', differences_message)
+
+    for part in parts:
+        if part == "Заголовки в файле Excel, но отсутствующие в шаблоне:":
+            label = Label(differences_label, text=part, justify="left", font=("Arial", 12, "bold"), fg="blue")  # Синий цвет
+        elif part == "Переменные в шаблоне, но отсутствующие в заголовках файла Excel:":
+            label = Label(differences_label, text=part, justify="left", font=("Arial", 12, "bold"), fg="red")
+        elif part == "Заголовки в файле Excel совпадают с переменными в шаблоне.":
+            label = Label(differences_label, text=part, justify="center", font=("Arial", 12, "bold"), fg="green")  # Зелёный цвет
+        else:
+            # Для перечисления переменных увеличим размер шрифта
+            label = Label(differences_label, text=part, justify="center", font=("Arial", 10))  
+
+        label.pack(anchor="center")  # Пакет по центру
 
     replace_button = Button(root, text="Продолжить и заменить", command=lambda: select_column(root, header_row, template_variables))
-    replace_button.grid(row=1, column=0, pady=5)
+    replace_button.grid(row=1, column=0, columnspan=2, pady=5)  # Используем grid() для управления расположением кнопок
 
     close_button = Button(root, text="Закрыть программу", command=close_program)
-    close_button.grid(row=3, column=0, pady=5)
+    close_button.grid(row=2, column=0, columnspan=2, pady=5)  # Используем grid() для управления расположением кнопок
+
+    root.grid_rowconfigure(0, weight=1)  # Равномерное распределение по строкам
+    root.grid_columnconfigure(0, weight=1)  # Равномерное распределение по столбцам
+
 
 # Функция для установки ширины метки
 def set_label_width(label, max_width):
@@ -176,8 +233,11 @@ def select_column(root, header_row, template_variables):
     selection_label = Label(root, text="Выберите название для файлов:")
     selection_label.grid(row=0, column=0, sticky="w")
 
+    root.columnconfigure(0, weight=1)  # Растягиваем первый столбец корневого виджета
+
     listbox = Listbox(root, selectmode="SINGLE")
-    listbox.grid(row=1, column=0, sticky="w")
+    listbox.grid(row=1, column=0, sticky="ew", padx=(10, 0), pady=(20, 10))  # Увеличиваем отступы по горизонтали и вертикали
+
 
     scrollbar = Scrollbar(root, orient="vertical")
     scrollbar.config(command=listbox.yview)
@@ -188,7 +248,7 @@ def select_column(root, header_row, template_variables):
         listbox.insert("end", column_name)
 
     select_button = Button(root, text="Выбрать", command=select_column_callback)
-    select_button.grid(row=2, column=0, pady=10)
+    select_button.grid(row=2, column=0, pady=5)
 
     close_button = Button(root, text="Закрыть программу", command=close_program)
     close_button.grid(row=4, column=0, pady=5)
@@ -196,7 +256,7 @@ def select_column(root, header_row, template_variables):
 # Функция для отображения окна успешного выполнения или отчёта об ошибке
 def show_success_or_report_window(root):
     clear_window(root)
-
+    
     success_label = Label(root, text="Замена прошла успешно", justify="left", fg="green", font=("Arial", 12))
     success_label.grid(row=0, column=0, pady=5)
 
@@ -239,9 +299,21 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
         first_row_header = list(header_row.keys())[0]
         file_name = re.sub(r'[\\/*?:"<>|]', '_', str(context[column_name]))
 
-        file_exists = os.path.exists(os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx"))
-        if file_exists:
-            file_name += f"_{generate_unique_suffix()}"
+        # Проверяем, существуют ли файлы с такими же именами
+        docx_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx")
+        pdf_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
+
+        if os.path.exists(docx_file_path) or os.path.exists(pdf_file_path):
+            # Если файлы уже существуют, спрашиваем пользователя о замене всех или создании с уникальными номерами
+            replace = messagebox.askyesno("Файлы уже существуют", f"Файлы '{file_name}.docx' и/или '{file_name}.pdf' уже существуют. Заменить их?")
+            if replace:
+                if os.path.exists(docx_file_path):
+                    os.remove(docx_file_path)
+                if os.path.exists(pdf_file_path):
+                    os.remove(pdf_file_path)
+            else:
+                # Создаем уникальные имена для файлов
+                file_name += f"_{generate_unique_suffix()}"
 
         if any(context.values()):
             doc = DocxTemplate(TEMPLATE_PATH)
