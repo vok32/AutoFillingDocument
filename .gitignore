@@ -1,8 +1,5 @@
 # Игнорировать файлы автосейва
 *~
 
-# Игнорировать файлы Python с названием AutoDocChange
-AutoDocChange.py
-
 # Игнорировать папку EarlyVersions
 EarlyVersions/
