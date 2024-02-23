@@ -25,6 +25,12 @@ def restart_program():
     python = sys.executable
     os.execl(python, python, *sys.argv)
 
+# Функция удаления файла с названием заголовка
+def delete_files_with_pattern(directory, pattern):
+    for filename in os.listdir(directory):
+        if pattern in filename:
+            os.remove(os.path.join(directory, filename))
+
 # Функция для генерации уникального суффикса
 def generate_unique_suffix(file_name):
     base_name, ext = os.path.splitext(file_name)
@@ -346,13 +352,7 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
         else:
             pass
 
-    selected_file_path = os.path.join(SAVE_PATH, f"шаблон-{column_name}.docx")
-    if os.path.exists(selected_file_path):
-        os.remove(selected_file_path)
-
-    selected_file_pdf_path = os.path.join(SAVE_PATH, f"шаблон-{column_name}.pdf")
-    if os.path.exists(selected_file_pdf_path):
-        os.remove(selected_file_pdf_path)
+    delete_files_with_pattern(SAVE_PATH, f"шаблон-{column_name}")
 
 # Функция для чтения данных из файла Excel
 def excel_read(root, path_file):
