@@ -16,6 +16,9 @@ TEMPLATE_PATH = ""
 EXCEL_PATH = ""
 SAVE_PATH = ""
 
+# Глобальная переменная для хранения выбора пользователя
+replace_choice = {}
+
 # Функция для закрытия программы
 def close_program():
     exit()
@@ -26,8 +29,25 @@ def restart_program():
     os.execl(python, python, *sys.argv)
 
 # Функция для генерации уникального суффикса
-def generate_unique_suffix(length=4):
-    return ''.join(random.choices(string.ascii_uppercase, k=length))
+def generate_unique_suffix(file_name):
+    base_name, ext = os.path.splitext(file_name)
+    suffix_pattern = re.compile(r'_new_(\d+)')
+    existing_suffixes = set()
+    
+    # Поиск существующих суффиксов в именах файлов
+    for file in os.listdir(SAVE_PATH):
+        if file.startswith(f"шаблон-{base_name}_new_") and file.endswith(ext):
+            match = suffix_pattern.search(file)
+            if match:
+                existing_suffixes.add(int(match.group(1)))
+
+    # Выбор следующего доступного суффикса
+    suffix_num = 1
+    while suffix_num in existing_suffixes:
+        suffix_num += 1
+        
+    new_suffix = f"_new_{suffix_num}"
+    return base_name + new_suffix + ext
 
 # Функция для парсинга переменных из шаблона Word
 def parse_template(template_path):
@@ -313,7 +333,7 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
                     os.remove(pdf_file_path)
             else:
                 # Создаем уникальные имена для файлов
-                file_name += f"_{generate_unique_suffix()}"
+                file_name = generate_unique_suffix(file_name)
 
         if any(context.values()):
             doc = DocxTemplate(TEMPLATE_PATH)
