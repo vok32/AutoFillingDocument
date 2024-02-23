@@ -309,7 +309,10 @@ def clear_window(root):
 # Функция для создания документа
 def create_doc(root, akt_list, header_row, column_index, column_name, convert_to_pdf=True, delete_docx=True):
     header_dict = {name: index for index, name in enumerate(header_row)}
-
+    
+    # Проверяем, существуют ли файлы с такими же именами
+    existing_files = []
+    unique_file_names = {}  # Initialize unique_file_names outside of the conditional block
     for row_data in akt_list:
         context = {}
         for variable, column in header_row.items():
@@ -327,16 +330,61 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
         pdf_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
 
         if os.path.exists(docx_file_path) or os.path.exists(pdf_file_path):
-            # Если файлы уже существуют, спрашиваем пользователя о замене всех или создании с уникальными номерами
-            replace = messagebox.askyesno("Файлы уже существуют", f"Файлы '{file_name}.docx' и/или '{file_name}.pdf' уже существуют. Заменить их?")
-            if replace:
-                if os.path.exists(docx_file_path):
-                    os.remove(docx_file_path)
-                if os.path.exists(pdf_file_path):
-                    os.remove(pdf_file_path)
+            existing_files.append((file_name, docx_file_path, pdf_file_path))
+            # Check for unique suffixes
+            if os.path.exists(docx_file_path):
+                unique_suffix = re.findall(r'_(\d+)$', file_name)
+                if unique_suffix:
+                    unique_file_names.setdefault(file_name.replace(f"_{unique_suffix[0]}", ""), []).append(f"_{unique_suffix[0]}")
+
+    if existing_files:
+        existing_files_info = []
+        for name, docx_path, pdf_path in existing_files:
+            files_info = f'{name}.docx'
+            if os.path.exists(pdf_path):
+                files_info += f' и {name}.pdf'
+            existing_files_info.append(files_info)
+            # Check for files with unique suffixes
+            for file_suffix in unique_file_names.get(name, []):
+                unique_docx_path = os.path.join(SAVE_PATH, f"шаблон-{name}{file_suffix}.docx")
+                unique_pdf_path = os.path.join(SAVE_PATH, f"шаблон-{name}{file_suffix}.pdf")
+                if os.path.exists(unique_docx_path):
+                    files_info = f'{name}{file_suffix}.docx'
+                    if os.path.exists(unique_pdf_path):
+                        files_info += f' и {name}{file_suffix}.pdf'
+                    existing_files_info.append(files_info)
+
+        replace = messagebox.askyesno("Файлы уже существуют", 
+            f"Файлы уже существуют: {', '.join(existing_files_info)}. Заменить их?")
+
+        if replace:
+            for _, docx_path, pdf_path in existing_files:
+                if os.path.exists(docx_path):
+                    os.remove(docx_path)
+                if os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+        else:
+            # Создаем уникальные имена для файлов и сохраняем их
+            for file_name, _, _ in existing_files:
+                unique_file_names[file_name] = generate_unique_suffix(file_name)
+
+    for row_data in akt_list:
+        context = {}
+        for variable, column in header_row.items():
+            index = header_dict.get(variable)
+            if index is not None:
+                context[variable] = row_data[index]
             else:
-                # Создаем уникальные имена для файлов
-                file_name = generate_unique_suffix(file_name)
+                context[variable] = ''
+
+        first_row_header = list(header_row.keys())[0]
+        file_name = re.sub(r'[\\/*?:"<>|]', '_', str(context[column_name]))
+
+        docx_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx")
+        pdf_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
+
+        if existing_files and file_name in unique_file_names:
+            file_name = unique_file_names[file_name]  # Используем уникальное имя из сохраненных
 
         if any(context.values()):
             doc = DocxTemplate(TEMPLATE_PATH)
