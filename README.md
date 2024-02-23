@@ -36,6 +36,7 @@ The script includes the following built-in functions:
 
 - **close_program()**: Closes the program.
 - **restart_program()**: Restarts the program.
+- **delete_files_with_pattern()**: Deletes files with the header name.
 - **generate_unique_suffix(length)**: Generates a unique suffix of the specified length.
 - **parse_template(template_path)**: Parses variables from the Word template.
 - **select_template_file()**: Opens a dialog box to select a Word template file.
@@ -95,6 +96,10 @@ The program assumes that the data in the Excel table has a specific structure, w
 4. **Locating the Executable File**: After the conversion process is complete, Auto-py-to-exe will create the executable file in the location you specified.
 5. **Running the Executable File**: Double-click the created executable file to run the program.
 
+## Versions
+v1.0 - release
+
+v1.1 - unique suffix "file_name_new_*" and universal replacement/cancellation of the replacement of the collected files
 
 ## Author
 
