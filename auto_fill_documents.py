@@ -16,9 +16,6 @@ TEMPLATE_PATH = ""
 EXCEL_PATH = ""
 SAVE_PATH = ""
 
-# Глобальная переменная для хранения выбора пользователя
-replace_choice = {}
-
 # Функция для закрытия программы
 def close_program():
     exit()
