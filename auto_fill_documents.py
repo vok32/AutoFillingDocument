@@ -276,7 +276,7 @@ def select_column(root, header_row, template_variables):
     close_button = Button(root, text="Закрыть программу", command=close_program)
     close_button.grid(row=4, column=0, pady=5)
 
-# Функция для отображения окна успешного выполнения или отчёта об ошибке
+# Функция для отображения окна успешного выполнения или отчёта об   ошибке
 def show_success_or_report_window(root):
     clear_window(root)
     
