@@ -415,7 +415,7 @@ def excel_read(root, path_file):
     template_variables = parse_template(TEMPLATE_PATH)
 
     differences = compare_headers_and_variables(header_row, template_variables)
-    if differences != "Заголовки в файле Ecel совпадают с переменными в шаблоне.":
+    if differences == "Заголовки в файле Excel совпадают с переменными в шаблоне.":
         show_header_and_variable_selection_ui(root, header_row, template_variables)
     else:
         default_column_name = next(iter(header_row.keys()))
