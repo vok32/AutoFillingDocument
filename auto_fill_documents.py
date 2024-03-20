@@ -344,7 +344,7 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
             if os.path.exists(pdf_path):
                 files_info += f' и {name}.pdf'
             existing_files_info.append(files_info)
-            # Check for files with unique suffixes
+            # Проверка файлов на уникальные суффиксы
             for file_suffix in unique_file_names.get(name, []):
                 unique_docx_path = os.path.join(SAVE_PATH, f"шаблон-{name}{file_suffix}.docx")
                 unique_pdf_path = os.path.join(SAVE_PATH, f"шаблон-{name}{file_suffix}.pdf")
@@ -467,7 +467,7 @@ if __name__ == '__main__':
     start_button = Button(root, text="Продолжить", command=lambda: excel_read(root, EXCEL_PATH))
     start_button.grid(row=4, column=0, padx=10, pady=5, sticky='nsew')
 
-    developer_button = Button(root, text="Об разработчике", command=show_developer_info)
+    developer_button = Button(root, text="О разработчике", command=show_developer_info)
     developer_button.grid(row=5, column=0, padx=10, pady=5, sticky='nsew')
 
     root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root))
