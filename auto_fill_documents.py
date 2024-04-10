@@ -7,6 +7,7 @@ from tkinter import Tk, Label, Button, Listbox, Scrollbar, filedialog, messagebo
 from docx2txt import process
 from docxtpl import DocxTemplate
 from docx2pdf import convert
+from docx import Document
 import random
 import string
 import pyautogui
@@ -39,7 +40,7 @@ def generate_unique_suffix(file_name):
     
     # Поиск существующих суффиксов в именах файлов
     for file in os.listdir(SAVE_PATH):
-        if file.startswith(f"шаблон-{base_name}_new_") and file.endswith(ext):
+        if file.startswith(f"{base_name}_new_") and file.endswith(ext):
             match = suffix_pattern.search(file)
             if match:
                 existing_suffixes.add(int(match.group(1)))
@@ -52,10 +53,22 @@ def generate_unique_suffix(file_name):
     new_suffix = f"_new_{suffix_num}"
     return base_name + new_suffix + ext
 
-# Функция для парсинга переменных из шаблона Word
+# Функция для поиска переменных из шаблона Word
 def parse_template(template_path):
-    text = process(template_path)
-    variables = set(re.findall(r'\{\{(.+?)\}\}', text))  # Используем множество для уникальных переменных
+    doc = Document(template_path)
+    variables = set()
+
+    # Поиск переменных в тексте
+    for paragraph in doc.paragraphs:
+        text = paragraph.text
+        variables.update(re.findall(r'\{\{(.+?)\}\}', text))
+
+    # Поиск переменных в таблицах
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                variables.update(re.findall(r'\{\{(.+?)\}\}', cell.text))
+
     return variables
 
 # Функция для выбора файла шаблона Word
@@ -276,7 +289,7 @@ def select_column(root, header_row, template_variables):
     close_button = Button(root, text="Закрыть программу", command=close_program)
     close_button.grid(row=4, column=0, pady=5)
 
-# Функция для отображения окна успешного выполнения или отчёта об   ошибке
+# Функция для отображения окна успешного выполнения или отчёта об ошибке
 def show_success_or_report_window(root):
     clear_window(root)
     
@@ -312,7 +325,7 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
     
     # Проверяем, существуют ли файлы с такими же именами
     existing_files = []
-    unique_file_names = {}  # Initialize unique_file_names outside of the conditional block
+    unique_file_names = {} # Инициализировать уникальные имена файлов вне условного блока
     for row_data in akt_list:
         context = {}
         for variable, column in header_row.items():
@@ -326,8 +339,8 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
         file_name = re.sub(r'[\\/*?:"<>|]', '_', str(context[column_name]))
 
         # Проверяем, существуют ли файлы с такими же именами
-        docx_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx")
-        pdf_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
+        docx_file_path = os.path.join(SAVE_PATH, f"{file_name}.docx")
+        pdf_file_path = os.path.join(SAVE_PATH, f"{file_name}.pdf")
 
         if os.path.exists(docx_file_path) or os.path.exists(pdf_file_path):
             existing_files.append((file_name, docx_file_path, pdf_file_path))
@@ -346,8 +359,8 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
             existing_files_info.append(files_info)
             # Проверка файлов на уникальные суффиксы
             for file_suffix in unique_file_names.get(name, []):
-                unique_docx_path = os.path.join(SAVE_PATH, f"шаблон-{name}{file_suffix}.docx")
-                unique_pdf_path = os.path.join(SAVE_PATH, f"шаблон-{name}{file_suffix}.pdf")
+                unique_docx_path = os.path.join(SAVE_PATH, f"{name}{file_suffix}.docx")
+                unique_pdf_path = os.path.join(SAVE_PATH, f"{name}{file_suffix}.pdf")
                 if os.path.exists(unique_docx_path):
                     files_info = f'{name}{file_suffix}.docx'
                     if os.path.exists(unique_pdf_path):
@@ -380,8 +393,8 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
         first_row_header = list(header_row.keys())[0]
         file_name = re.sub(r'[\\/*?:"<>|]', '_', str(context[column_name]))
 
-        docx_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx")
-        pdf_file_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
+        docx_file_path = os.path.join(SAVE_PATH, f"{file_name}.docx")
+        pdf_file_path = os.path.join(SAVE_PATH, f"{file_name}.pdf")
 
         if existing_files and file_name in unique_file_names:
             file_name = unique_file_names[file_name]  # Используем уникальное имя из сохраненных
@@ -389,18 +402,18 @@ def create_doc(root, akt_list, header_row, column_index, column_name, convert_to
         if any(context.values()):
             doc = DocxTemplate(TEMPLATE_PATH)
             doc.render(context)
-            doc_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.docx")
+            doc_path = os.path.join(SAVE_PATH, f"{file_name}.docx")
             doc.save(doc_path)
 
             if convert_to_pdf:
-                pdf_path = os.path.join(SAVE_PATH, f"шаблон-{file_name}.pdf")
+                pdf_path = os.path.join(SAVE_PATH, f"{file_name}.pdf")
                 convert(doc_path, pdf_path)
                 if delete_docx:
                     os.remove(doc_path)
         else:
             pass
 
-    delete_files_with_pattern(SAVE_PATH, f"шаблон-{column_name}")
+    delete_files_with_pattern(SAVE_PATH, f"{column_name}")
 
 # Функция для чтения данных из файла Excel
 def excel_read(root, path_file):
