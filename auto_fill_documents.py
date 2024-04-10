@@ -3,6 +3,7 @@ import os
 import sys
 import subprocess
 import openpyxl as op
+import signal
 from tkinter import Tk, Label, Button, Listbox, Scrollbar, filedialog, messagebox, StringVar, Frame, LEFT, Text
 from docx2txt import process
 from docxtpl import DocxTemplate
@@ -19,7 +20,19 @@ SAVE_PATH = ""
 
 # Функция для закрытия программы
 def close_program():
-    exit()
+    # Попробуем завершить программу используя os._exit(0)
+    try:
+        os._exit(0)
+    except Exception as e:
+        print("Не удалось закрыть программу:", e)
+        # Если os._exit(0) не сработал, попробуем отправить SIGTERM (сигнал завершения) текущему процессу
+        try:
+            pid = os.getpid()
+            os.kill(pid, signal.SIGTERM)
+        except Exception as e:
+            print("Не удалось закрыть программу даже через SIGTERM:", e)
+            # Если и SIGTERM не сработал, остаётся только sys.exit()
+            sys.exit()
 
 # Функция для перезапуска программы
 def restart_program():
