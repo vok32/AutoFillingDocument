@@ -200,6 +200,7 @@ def show_differences_ui(root, header_row, template_variables):
     root.geometry("900x350")  # Установка размера окна
 
     differences_message = compare_headers_and_variables(header_row, template_variables)
+    # print(f"Differences message: {differences_message}")  # Диагностика
 
     differences_label = Label(root, justify="center")  # Выравнивание по центру
     differences_label.place(relx=0.5, rely=0.4, anchor="center")  # Установка по центру окна и немного выше середины
@@ -441,11 +442,12 @@ def excel_read(root, path_file):
     template_variables = parse_template(TEMPLATE_PATH)
 
     differences = compare_headers_and_variables(header_row, template_variables)
+    # print(f"Comparison result: {differences}")  # Диагностика
+
     if differences == "Заголовки в файле Excel совпадают с переменными в шаблоне.":
         show_header_and_variable_selection_ui(root, header_row, template_variables)
     else:
-        default_column_name = next(iter(header_row.keys()))
-        create_doc(root, [], header_row, 1, default_column_name)
+        show_differences_ui(root, header_row, template_variables)
 
 # Функция для обработки закрытия окна
 def on_closing(root):
